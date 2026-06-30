@@ -253,10 +253,13 @@ public class ValidationException extends RuntimeException {
 package com.paymentgateway.domain.model;
 
 public record Currency(String code) {
-    public static Currency of(String code) {
+    public Currency {
         if (code == null || !code.matches("[A-Z]{3}")) {
             throw new ValidationException("currency must be a 3-letter ISO 4217 code");
         }
+    }
+
+    public static Currency of(String code) {
         return new Currency(code);
     }
 }
@@ -328,13 +331,16 @@ Expected: FAIL — `Money` does not exist.
 package com.paymentgateway.domain.model;
 
 public record Money(Currency currency, long amount) {
-    public static Money of(Currency currency, long amount) {
+    public Money {
         if (currency == null) {
             throw new ValidationException("currency is required");
         }
         if (amount <= 0) {
             throw new ValidationException("amount must be a positive integer in the minor currency unit");
         }
+    }
+
+    public static Money of(Currency currency, long amount) {
         return new Money(currency, amount);
     }
 }
@@ -416,19 +422,26 @@ import java.time.Clock;
 import java.time.YearMonth;
 
 public record ExpiryDate(int month, int year) {
-    public static ExpiryDate of(int month, int year, Clock clock) {
+    public ExpiryDate {
         if (month < 1 || month > 12) {
             throw new ValidationException("expiry month must be between 1 and 12");
         }
-        YearMonth expiry = YearMonth.of(year, month);
-        YearMonth current = YearMonth.now(clock);
-        if (expiry.isBefore(current)) {
+    }
+
+    public static ExpiryDate of(int month, int year, Clock clock) {
+        ExpiryDate expiry = new ExpiryDate(month, year);
+        if (YearMonth.of(year, month).isBefore(YearMonth.now(clock))) {
             throw new ValidationException("card expiry must be in the future");
         }
-        return new ExpiryDate(month, year);
+        return expiry;
     }
 }
 ```
+
+Note: the month-range invariant lives in the compact constructor (always
+enforced). The future-date check stays in `of(...)` because it depends on a
+`Clock`, which the canonical constructor cannot receive — this is why tests
+construct fixed dates via `new ExpiryDate(4, 2027)` without triggering it.
 
 - [ ] **Step 4: Run to verify pass**
 
@@ -506,13 +519,16 @@ Expected: FAIL — `Card` does not exist.
 package com.paymentgateway.domain.model;
 
 public record Card(String number, String cvv, ExpiryDate expiry) {
-    public static Card of(String number, String cvv, ExpiryDate expiry) {
+    public Card {
         if (number == null || !number.matches("\\d{14,19}")) {
             throw new ValidationException("card number must be 14-19 digits");
         }
         if (cvv == null || !cvv.matches("\\d{3,4}")) {
             throw new ValidationException("cvv must be 3-4 digits");
         }
+    }
+
+    public static Card of(String number, String cvv, ExpiryDate expiry) {
         return new Card(number, cvv, expiry);
     }
 
