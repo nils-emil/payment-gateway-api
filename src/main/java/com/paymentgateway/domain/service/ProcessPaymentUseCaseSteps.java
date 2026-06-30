@@ -28,15 +28,18 @@ public class ProcessPaymentUseCaseSteps {
         this.validationRules = validationRules;
     }
 
-    public ValidatedPayment validate(PaymentRequest request) {
-        List<String> errors = new ArrayList<>();
+    public List<ValidationError> validate(PaymentRequest request) {
+        List<ValidationError> errors = new ArrayList<>();
         for (ValidationRule<PaymentRequest> rule : validationRules) {
             errors.addAll(rule.validate(request));
         }
+        return errors;
+    }
+
+    public void handleValidationErrors(List<ValidationError> errors) {
         if (!errors.isEmpty()) {
             throw new ValidationException(errors);
         }
-        return build(request);
     }
 
     public Payment savePending(ValidatedPayment validated) {
@@ -55,7 +58,7 @@ public class ProcessPaymentUseCaseSteps {
         return repository.save(finalized);
     }
 
-    private ValidatedPayment build(PaymentRequest request) {
+    public ValidatedPayment build(PaymentRequest request) {
         Currency currency = Currency.of(request.currency());
         ExpiryDate expiry = ExpiryDate.of(request.expiryMonth(), request.expiryYear(), clock);
         Card card = Card.of(request.cardNumber(), request.cvv(), expiry);

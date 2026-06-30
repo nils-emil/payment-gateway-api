@@ -3,7 +3,7 @@ package com.paymentgateway.domain.model;
 public record Currency(String code) {
     public Currency {
         if (code == null || !code.matches("[A-Z]{3}")) {
-            throw new ValidationException("currency must be a 3-letter ISO 4217 code");
+            throw new ValidationException("currency.invalid", "currency must be a 3-letter ISO 4217 code");
         }
     }
 

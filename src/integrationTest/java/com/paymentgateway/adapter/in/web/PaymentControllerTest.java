@@ -49,12 +49,13 @@ class PaymentControllerTest {
     @Test
     void validationExceptionReturns400RejectedWithErrors() throws Exception {
         when(processPaymentUseCase.process(any()))
-                .thenThrow(new ValidationException(java.util.List.of("cvv must be 3-4 digits")));
+                .thenThrow(new ValidationException(new ValidationError("cvv.invalid", "cvv must be 3-4 digits")));
 
         mvc.perform(post("/payments").contentType(MediaType.APPLICATION_JSON).content(validBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value("Rejected"))
-                .andExpect(jsonPath("$.errors[0]").value("cvv must be 3-4 digits"));
+                .andExpect(jsonPath("$.errors[0].code").value("cvv.invalid"))
+                .andExpect(jsonPath("$.errors[0].description").value("cvv must be 3-4 digits"));
     }
 
     @Test

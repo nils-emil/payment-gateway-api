@@ -30,9 +30,12 @@ Rules:
   use cases delegate their step implementations to a sibling `…UseCaseSteps` `@Component`.
   Controllers depend on the use-case class directly (no inbound port interface).
 - Request validation is a set of `ValidationRule<T>` `@Component`s in `domain/service/validation`;
-  each returns a list of error strings (it does not throw). The use case injects
-  `List<ValidationRule<PaymentRequest>>`, aggregates every rule's errors, and raises one
-  `ValidationException` (→ 400 Rejected). Add a rule by adding a `@Component` — no orchestration change.
+  each returns a `List<ValidationError>` (`code` + `description`, never throws). The use-case
+  steps inject `List<ValidationRule<PaymentRequest>>` and aggregate them in `validate(...)`; the
+  use case then calls `handleValidationErrors(...)`, which raises one `ValidationException`
+  (→ 400 Rejected) carrying all errors. Add a rule by adding a `@Component`.
+- Validation errors carry a translation `code` and a fallback `description`; both are returned
+  in the 400 response (`{ "status": "Rejected", "errors": [ { "code", "description" } ] }`).
 - Driven side keeps interfaces: `domain/port/out` ports (`PaymentRepository`,
   `AcquiringBankClient`) are implemented by adapters in `adapter/out`.
 - Adapters depend on the domain, never the other way round.

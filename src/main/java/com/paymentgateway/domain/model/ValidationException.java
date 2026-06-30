@@ -1,20 +1,25 @@
 package com.paymentgateway.domain.model;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ValidationException extends RuntimeException {
-    private final List<String> errors;
+    private final List<ValidationError> errors;
 
-    public ValidationException(String error) {
+    public ValidationException(String code, String description) {
+        this(new ValidationError(code, description));
+    }
+
+    public ValidationException(ValidationError error) {
         this(List.of(error));
     }
 
-    public ValidationException(List<String> errors) {
-        super(String.join("; ", errors));
+    public ValidationException(List<ValidationError> errors) {
+        super(errors.stream().map(ValidationError::description).collect(Collectors.joining("; ")));
         this.errors = List.copyOf(errors);
     }
 
-    public List<String> errors() {
+    public List<ValidationError> errors() {
         return errors;
     }
 }
