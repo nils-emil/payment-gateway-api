@@ -1,0 +1,16 @@
+server:
+  port: 8090
+
+spring:
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    default-property-inclusion: non_null
+
+payment:
+  bank:
+    base-url: http://localhost:8080
+  currencies:
+    allowed:
+      - GBP
+      - USD
+      - EUR
