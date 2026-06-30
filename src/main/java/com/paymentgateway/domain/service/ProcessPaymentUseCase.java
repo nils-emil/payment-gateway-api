@@ -1,13 +1,11 @@
 package com.paymentgateway.domain.service;
 
+import com.paymentgateway.domain.model.Card;
+import com.paymentgateway.domain.model.Money;
 import com.paymentgateway.domain.model.Payment;
-import com.paymentgateway.domain.model.ValidationError;
 import com.paymentgateway.domain.port.in.PaymentRequest;
 import com.paymentgateway.domain.port.out.BankResult;
-import com.paymentgateway.domain.service.ProcessPaymentUseCaseSteps.ValidatedPayment;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 public class ProcessPaymentUseCase {
@@ -19,12 +17,12 @@ public class ProcessPaymentUseCase {
     }
 
     public Payment process(PaymentRequest request) {
-        List<ValidationError> errors = steps.validate(request);
-        steps.handleValidationErrors(errors);
+        steps.handleValidationErrors(steps.validate(request));
 
-        ValidatedPayment validated = steps.build(request);
-        Payment pending = steps.savePending(validated);
-        BankResult result = steps.authorize(validated);
+        Card card = steps.toCard(request);
+        Money money = steps.toMoney(request);
+        Payment pending = steps.savePending(card, money);
+        BankResult result = steps.authorize(card, money);
         return steps.settle(pending, result);
     }
 }

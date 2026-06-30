@@ -42,13 +42,21 @@ public class ProcessPaymentUseCaseSteps {
         }
     }
 
-    public Payment savePending(ValidatedPayment validated) {
-        Card card = validated.card();
-        return repository.save(Payment.pending(card.lastFour(), card.expiry(), validated.money()));
+    public Card toCard(PaymentRequest request) {
+        ExpiryDate expiry = ExpiryDate.of(request.expiryMonth(), request.expiryYear(), clock);
+        return Card.of(request.cardNumber(), request.cvv(), expiry);
     }
 
-    public BankResult authorize(ValidatedPayment validated) {
-        return bankClient.authorize(validated.card(), validated.money());
+    public Money toMoney(PaymentRequest request) {
+        return Money.of(Currency.of(request.currency()), request.amount());
+    }
+
+    public Payment savePending(Card card, Money money) {
+        return repository.save(Payment.pending(card.lastFour(), card.expiry(), money));
+    }
+
+    public BankResult authorize(Card card, Money money) {
+        return bankClient.authorize(card, money);
     }
 
     public Payment settle(Payment pending, BankResult result) {
@@ -56,16 +64,5 @@ public class ProcessPaymentUseCaseSteps {
                 ? pending.authorize(result.authorizationCode())
                 : pending.decline();
         return repository.save(finalized);
-    }
-
-    public ValidatedPayment build(PaymentRequest request) {
-        Currency currency = Currency.of(request.currency());
-        ExpiryDate expiry = ExpiryDate.of(request.expiryMonth(), request.expiryYear(), clock);
-        Card card = Card.of(request.cardNumber(), request.cvv(), expiry);
-        Money money = Money.of(currency, request.amount());
-        return new ValidatedPayment(card, money);
-    }
-
-    public record ValidatedPayment(Card card, Money money) {
     }
 }
