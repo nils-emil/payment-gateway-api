@@ -1,8 +1,8 @@
 package com.paymentgateway.adapter.in.web;
 
 import com.paymentgateway.domain.model.Payment;
-import com.paymentgateway.domain.port.in.GetPaymentUseCase;
-import com.paymentgateway.domain.port.in.ProcessPaymentUseCase;
+import com.paymentgateway.domain.service.GetPaymentUseCase;
+import com.paymentgateway.domain.service.ProcessPaymentUseCase;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

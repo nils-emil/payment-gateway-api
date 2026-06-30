@@ -8,21 +8,28 @@ Java · Spring Boot · Gradle · JUnit.
 
 ```
 src/main/java/com/paymentgateway/
-├── domain/                 # Pure business logic, no Spring/framework deps
-│   ├── model/               # Payment, Card, Money, PaymentStatus, etc.
-│   ├── port/in/              # Use case interfaces (e.g. ProcessPaymentUseCase)
-│   ├── port/out/             # Driven ports (e.g. PaymentRepository, AcquiringBankClient)
-│   └── service/              # Use case implementations
+├── domain/
+│   ├── model/               # Pure value objects: Payment, Card, Money, PaymentStatus, etc.
+│   ├── port/in/              # Use case input commands (e.g. PaymentRequest)
+│   ├── port/out/             # Driven ports — interfaces (PaymentRepository, AcquiringBankClient)
+│   └── service/              # Use case classes as Spring @Service
+│                              #   (e.g. ProcessPaymentUseCase + ProcessPaymentUseCaseSteps, GetPaymentUseCase)
 ├── adapter/
 │   ├── in/web/                # REST controllers, request/response DTOs, mappers
 │   └── out/
 │       ├── persistence/        # In-memory repository implementing PaymentRepository
 │       └── bank/                # HTTP client implementing AcquiringBankClient, talks to bank simulator
-└── config/                   # Spring wiring (beans, RestClient/WebClient config)
+└── config/                   # Spring wiring (property beans, RestClient config)
 ```
 
 Rules:
-- `domain` has zero Spring/Jackson/HTTP annotations or imports. It must compile standalone.
+- `domain/model` is pure: zero Spring/Jackson/HTTP annotations or imports — value objects
+  must compile standalone.
+- Use cases live in `domain/service` as Spring `@Service` beans named `…UseCase`; multi-step
+  use cases delegate their step implementations to a sibling `…UseCaseSteps` `@Component`.
+  Controllers depend on the use-case class directly (no inbound port interface).
+- Driven side keeps interfaces: `domain/port/out` ports (`PaymentRepository`,
+  `AcquiringBankClient`) are implemented by adapters in `adapter/out`.
 - Adapters depend on the domain, never the other way round.
 - Controllers map to/from domain objects via dedicated mappers — domain objects never
   cross the REST boundary directly.

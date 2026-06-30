@@ -1,8 +1,8 @@
 package com.paymentgateway.adapter.in.web;
 
 import com.paymentgateway.domain.model.*;
-import com.paymentgateway.domain.port.in.GetPaymentUseCase;
-import com.paymentgateway.domain.port.in.ProcessPaymentUseCase;
+import com.paymentgateway.domain.service.GetPaymentUseCase;
+import com.paymentgateway.domain.service.ProcessPaymentUseCase;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;

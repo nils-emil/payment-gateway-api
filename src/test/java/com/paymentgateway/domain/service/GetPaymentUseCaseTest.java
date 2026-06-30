@@ -11,7 +11,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class GetPaymentServiceTest {
+class GetPaymentUseCaseTest {
 
     private final Map<UUID, Payment> store = new HashMap<>();
     private final PaymentRepository repository = new PaymentRepository() {
@@ -23,13 +23,13 @@ class GetPaymentServiceTest {
     void returnsStoredPayment() {
         Payment p = Payment.pending("8877", new ExpiryDate(4, 2027), Money.of(Currency.of("GBP"), 100));
         repository.save(p);
-        var service = new GetPaymentService(repository);
+        var service = new GetPaymentUseCase(repository);
         assertEquals(p.id(), service.getById(p.id()).id());
     }
 
     @Test
     void throwsWhenMissing() {
-        var service = new GetPaymentService(repository);
+        var service = new GetPaymentUseCase(repository);
         assertThrows(PaymentNotFoundException.class, () -> service.getById(UUID.randomUUID()));
     }
 }
