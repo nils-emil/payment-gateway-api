@@ -3,6 +3,7 @@ package com.paymentgateway.domain.service;
 import com.paymentgateway.domain.model.*;
 import com.paymentgateway.domain.port.in.PaymentRequest;
 import com.paymentgateway.domain.port.out.AcquiringBankClient;
+import com.paymentgateway.domain.port.out.AuthorizationCommand;
 import com.paymentgateway.domain.port.out.BankResult;
 import com.paymentgateway.domain.port.out.PaymentRepository;
 import com.paymentgateway.domain.service.validation.ValidationRule;
@@ -42,21 +43,20 @@ public class ProcessPaymentUseCaseSteps {
         }
     }
 
-    public Card toCard(PaymentRequest request) {
-        ExpiryDate expiry = ExpiryDate.of(request.expiryMonth(), request.expiryYear(), clock);
-        return Card.of(request.cardNumber(), request.cvv(), expiry);
+    public AuthorizationCommand authorizationFor(PaymentRequest request) {
+        return AuthorizationCommand.builder()
+                .request(request)
+                .clock(clock)
+                .build();
     }
 
-    public Money toMoney(PaymentRequest request) {
-        return Money.of(Currency.of(request.currency()), request.amount());
+    public Payment savePending(AuthorizationCommand command) {
+        Card card = command.card();
+        return repository.save(Payment.pending(card.lastFour(), card.expiry(), command.money(), command.idempotencyKey()));
     }
 
-    public Payment savePending(Card card, Money money) {
-        return repository.save(Payment.pending(card.lastFour(), card.expiry(), money));
-    }
-
-    public BankResult authorize(Card card, Money money) {
-        return bankClient.authorize(card, money);
+    public BankResult authorize(AuthorizationCommand command) {
+        return bankClient.authorize(command);
     }
 
     public Payment settle(Payment pending, BankResult result) {

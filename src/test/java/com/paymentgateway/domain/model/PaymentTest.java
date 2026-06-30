@@ -13,6 +13,7 @@ class PaymentTest {
         assertNotNull(p.id());
         assertEquals(PaymentStatus.PENDING, p.status());
         assertNull(p.authorizationCode());
+        assertNotNull(p.idempotencyKey());
     }
 
     @Test
@@ -22,6 +23,7 @@ class PaymentTest {
         assertEquals(p.id(), authorized.id());
         assertEquals(PaymentStatus.AUTHORIZED, authorized.status());
         assertEquals("auth-123", authorized.authorizationCode());
+        assertEquals(p.idempotencyKey(), authorized.idempotencyKey());
     }
 
     @Test
@@ -31,6 +33,7 @@ class PaymentTest {
         assertEquals(p.id(), declined.id());
         assertEquals(PaymentStatus.DECLINED, declined.status());
         assertNull(declined.authorizationCode());
+        assertEquals(p.idempotencyKey(), declined.idempotencyKey());
     }
 
     @Test

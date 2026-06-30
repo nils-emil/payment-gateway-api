@@ -8,17 +8,22 @@ public record Payment(
         String lastFour,
         ExpiryDate expiry,
         Money money,
-        String authorizationCode) {
+        String authorizationCode,
+        String idempotencyKey) {
 
     public static Payment pending(String lastFour, ExpiryDate expiry, Money money) {
-        return new Payment(UUID.randomUUID(), PaymentStatus.PENDING, lastFour, expiry, money, null);
+        return pending(lastFour, expiry, money, UUID.randomUUID().toString());
+    }
+
+    public static Payment pending(String lastFour, ExpiryDate expiry, Money money, String idempotencyKey) {
+        return new Payment(UUID.randomUUID(), PaymentStatus.PENDING, lastFour, expiry, money, null, idempotencyKey);
     }
 
     public Payment authorize(String authorizationCode) {
-        return new Payment(id, PaymentStatus.AUTHORIZED, lastFour, expiry, money, authorizationCode);
+        return new Payment(id, PaymentStatus.AUTHORIZED, lastFour, expiry, money, authorizationCode, idempotencyKey);
     }
 
     public Payment decline() {
-        return new Payment(id, PaymentStatus.DECLINED, lastFour, expiry, money, null);
+        return new Payment(id, PaymentStatus.DECLINED, lastFour, expiry, money, null, idempotencyKey);
     }
 }

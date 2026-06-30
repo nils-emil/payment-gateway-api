@@ -37,7 +37,7 @@ class ProcessPaymentUseCaseTest {
     }
 
     private AcquiringBankClient bankReturning(BankResult result) {
-        return (card, money) -> result;
+        return command -> result;
     }
 
     private PaymentRequest validRequest(String cardNumber) {
@@ -74,7 +74,7 @@ class ProcessPaymentUseCaseTest {
 
     @Test
     void invalidRequestThrowsAndNeverPersistsOrCallsBank() {
-        AcquiringBankClient explodingBank = (card, money) -> { throw new AssertionError("bank must not be called"); };
+        AcquiringBankClient explodingBank = command -> { throw new AssertionError("bank must not be called"); };
         var service = useCaseWith(explodingBank);
 
         PaymentRequest bad = new PaymentRequest("123", 13, 2020, "ZZZ", 0, "1");
@@ -95,7 +95,7 @@ class ProcessPaymentUseCaseTest {
 
     @Test
     void bankUnavailableLeavesPaymentPending() {
-        AcquiringBankClient downBank = (card, money) -> { throw new BankUnavailableException("down", null); };
+        AcquiringBankClient downBank = command -> { throw new BankUnavailableException("down", null); };
         var service = useCaseWith(downBank);
 
         assertThrows(BankUnavailableException.class, () -> service.process(validRequest("2222405343248870")));

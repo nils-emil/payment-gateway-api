@@ -1,9 +1,8 @@
 package com.paymentgateway.domain.service;
 
-import com.paymentgateway.domain.model.Card;
-import com.paymentgateway.domain.model.Money;
 import com.paymentgateway.domain.model.Payment;
 import com.paymentgateway.domain.port.in.PaymentRequest;
+import com.paymentgateway.domain.port.out.AuthorizationCommand;
 import com.paymentgateway.domain.port.out.BankResult;
 import org.springframework.stereotype.Service;
 
@@ -19,10 +18,9 @@ public class ProcessPaymentUseCase {
     public Payment process(PaymentRequest request) {
         steps.handleValidationErrors(steps.validate(request));
 
-        Card card = steps.toCard(request);
-        Money money = steps.toMoney(request);
-        Payment pending = steps.savePending(card, money);
-        BankResult result = steps.authorize(card, money);
+        AuthorizationCommand command = steps.authorizationFor(request);
+        Payment pending = steps.savePending(command);
+        BankResult result = steps.authorize(command);
         return steps.settle(pending, result);
     }
 }

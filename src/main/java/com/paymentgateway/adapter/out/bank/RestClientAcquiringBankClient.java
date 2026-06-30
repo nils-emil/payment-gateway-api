@@ -4,6 +4,7 @@ import com.paymentgateway.domain.model.BankUnavailableException;
 import com.paymentgateway.domain.model.Card;
 import com.paymentgateway.domain.model.Money;
 import com.paymentgateway.domain.port.out.AcquiringBankClient;
+import com.paymentgateway.domain.port.out.AuthorizationCommand;
 import com.paymentgateway.domain.port.out.BankResult;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -19,7 +20,9 @@ public class RestClientAcquiringBankClient implements AcquiringBankClient {
     }
 
     @Override
-    public BankResult authorize(Card card, Money money) {
+    public BankResult authorize(AuthorizationCommand command) {
+        Card card = command.card();
+        Money money = command.money();
         BankPaymentRequest body = new BankPaymentRequest(
                 card.number(),
                 formatExpiry(card),
