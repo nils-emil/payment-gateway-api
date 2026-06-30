@@ -1,6 +1,7 @@
 package com.paymentgateway.adapter.out.bank;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.paymentgateway.domain.model.Sensitive;
 
 public record BankPaymentRequest(
         @JsonProperty("card_number") String cardNumber,
@@ -8,4 +9,13 @@ public record BankPaymentRequest(
         String currency,
         long amount,
         String cvv) {
+
+    @Override
+    public String toString() {
+        return "BankPaymentRequest[cardNumber=" + Sensitive.maskCardNumber(cardNumber)
+                + ", expiryDate=" + expiryDate
+                + ", currency=" + currency
+                + ", amount=" + amount
+                + ", cvv=***]";
+    }
 }

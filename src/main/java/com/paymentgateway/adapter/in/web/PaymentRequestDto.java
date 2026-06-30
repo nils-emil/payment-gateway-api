@@ -1,6 +1,7 @@
 package com.paymentgateway.adapter.in.web;
 
-// JSON (global SNAKE_CASE): card_number, expiry_month, expiry_year, currency, amount, cvv
+import com.paymentgateway.domain.model.Sensitive;
+
 public record PaymentRequestDto(
         String cardNumber,
         int expiryMonth,
@@ -8,4 +9,14 @@ public record PaymentRequestDto(
         String currency,
         long amount,
         String cvv) {
+
+    @Override
+    public String toString() {
+        return "PaymentRequestDto[cardNumber=" + Sensitive.maskCardNumber(cardNumber)
+                + ", expiryMonth=" + expiryMonth
+                + ", expiryYear=" + expiryYear
+                + ", currency=" + currency
+                + ", amount=" + amount
+                + ", cvv=***]";
+    }
 }

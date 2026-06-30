@@ -30,4 +30,9 @@ class ExpiryDateTest {
         assertThrows(ValidationException.class, () -> ExpiryDate.of(0, 2027, clock));
         assertThrows(ValidationException.class, () -> ExpiryDate.of(13, 2027, clock));
     }
+
+    @Test
+    void rejectsAbsurdYearAsValidationErrorNotCrash() {
+        assertThrows(ValidationException.class, () -> ExpiryDate.of(4, 1_000_000_000, clock));
+    }
 }
