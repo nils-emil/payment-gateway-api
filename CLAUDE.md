@@ -57,8 +57,10 @@ Rules:
   this project — commit straight to `main`.
 - **Never run `git push`.** Pushing is the user's call, always.
 - **Never run `git commit` unless explicitly asked.** Stage/leave changes uncommitted by default.
-- When asked to commit, write a clear, conventional message (e.g. `feat: add payment validation`)
-  and ask before amending or rewriting history.
+- When asked to commit, write a clear, conventional message (e.g. `feat: add payment validation`).
+- **One commit per completed task.** Don't stack multiple commits for a single task — fold
+  follow-up fixes/review changes into that task's commit with `--amend` while it's still the
+  tip and unpushed. Ask before amending anything already pushed or rewriting older history.
 
 ## Documentation
 
