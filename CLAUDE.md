@@ -13,7 +13,8 @@ src/main/java/com/paymentgateway/
 │   ├── port/in/              # Use case input commands (e.g. PaymentRequest)
 │   ├── port/out/             # Driven ports — interfaces (PaymentRepository, AcquiringBankClient)
 │   └── service/              # Use case classes as Spring @Service
-│                              #   (e.g. ProcessPaymentUseCase + ProcessPaymentUseCaseSteps, GetPaymentUseCase)
+│       │                      #   (e.g. ProcessPaymentUseCase + ProcessPaymentUseCaseSteps, GetPaymentUseCase)
+│       └── validation/        # ValidationRule<T> @Components, one per rule
 ├── adapter/
 │   ├── in/web/                # REST controllers, request/response DTOs, mappers
 │   └── out/
@@ -28,6 +29,10 @@ Rules:
 - Use cases live in `domain/service` as Spring `@Service` beans named `…UseCase`; multi-step
   use cases delegate their step implementations to a sibling `…UseCaseSteps` `@Component`.
   Controllers depend on the use-case class directly (no inbound port interface).
+- Request validation is a set of `ValidationRule<T>` `@Component`s in `domain/service/validation`;
+  each returns a list of error strings (it does not throw). The use case injects
+  `List<ValidationRule<PaymentRequest>>`, aggregates every rule's errors, and raises one
+  `ValidationException` (→ 400 Rejected). Add a rule by adding a `@Component` — no orchestration change.
 - Driven side keeps interfaces: `domain/port/out` ports (`PaymentRepository`,
   `AcquiringBankClient`) are implemented by adapters in `adapter/out`.
 - Adapters depend on the domain, never the other way round.

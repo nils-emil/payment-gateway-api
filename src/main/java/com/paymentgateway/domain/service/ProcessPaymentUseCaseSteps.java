@@ -5,45 +5,38 @@ import com.paymentgateway.domain.port.in.PaymentRequest;
 import com.paymentgateway.domain.port.out.AcquiringBankClient;
 import com.paymentgateway.domain.port.out.BankResult;
 import com.paymentgateway.domain.port.out.PaymentRepository;
+import com.paymentgateway.domain.service.validation.ValidationRule;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
 
 @Component
 public class ProcessPaymentUseCaseSteps {
 
     private final PaymentRepository repository;
     private final AcquiringBankClient bankClient;
-    private final CurrencyAllowList allowList;
     private final Clock clock;
+    private final List<ValidationRule<PaymentRequest>> validationRules;
 
     public ProcessPaymentUseCaseSteps(PaymentRepository repository, AcquiringBankClient bankClient,
-                                      CurrencyAllowList allowList, Clock clock) {
+                                      Clock clock, List<ValidationRule<PaymentRequest>> validationRules) {
         this.repository = repository;
         this.bankClient = bankClient;
-        this.allowList = allowList;
         this.clock = clock;
+        this.validationRules = validationRules;
     }
 
     public ValidatedPayment validate(PaymentRequest request) {
         List<String> errors = new ArrayList<>();
-
-        Currency currency = collect(errors, () -> Currency.of(request.currency()));
-        ExpiryDate expiry = collect(errors, () -> ExpiryDate.of(request.expiryMonth(), request.expiryYear(), clock));
-        Card card = collect(errors, () -> Card.of(request.cardNumber(), request.cvv(), expiry));
-        Money money = currency == null ? null : collect(errors, () -> Money.of(currency, request.amount()));
-
-        if (currency != null && !allowList.contains(currency)) {
-            errors.add("currency " + request.currency() + " is not supported");
+        for (ValidationRule<PaymentRequest> rule : validationRules) {
+            errors.addAll(rule.validate(request));
         }
         if (!errors.isEmpty()) {
             throw new ValidationException(errors);
         }
-
-        return new ValidatedPayment(card, money);
+        return build(request);
     }
 
     public Payment savePending(ValidatedPayment validated) {
@@ -62,13 +55,12 @@ public class ProcessPaymentUseCaseSteps {
         return repository.save(finalized);
     }
 
-    private <T> T collect(List<String> errors, Supplier<T> supplier) {
-        try {
-            return supplier.get();
-        } catch (ValidationException e) {
-            errors.addAll(e.errors());
-            return null;
-        }
+    private ValidatedPayment build(PaymentRequest request) {
+        Currency currency = Currency.of(request.currency());
+        ExpiryDate expiry = ExpiryDate.of(request.expiryMonth(), request.expiryYear(), clock);
+        Card card = Card.of(request.cardNumber(), request.cvv(), expiry);
+        Money money = Money.of(currency, request.amount());
+        return new ValidatedPayment(card, money);
     }
 
     public record ValidatedPayment(Card card, Money money) {

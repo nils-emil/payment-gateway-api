@@ -5,6 +5,7 @@ import com.paymentgateway.domain.port.in.PaymentRequest;
 import com.paymentgateway.domain.port.out.AcquiringBankClient;
 import com.paymentgateway.domain.port.out.BankResult;
 import com.paymentgateway.domain.port.out.PaymentRepository;
+import com.paymentgateway.domain.service.validation.*;
 import org.junit.jupiter.api.Test;
 
 import java.time.*;
@@ -25,6 +26,16 @@ class ProcessPaymentUseCaseTest {
         }
     };
 
+    private ProcessPaymentUseCase useCaseWith(AcquiringBankClient bank) {
+        List<ValidationRule<PaymentRequest>> rules = List.of(
+                new CardNumberValidationRule(),
+                new CvvValidationRule(),
+                new AmountValidationRule(),
+                new ExpiryValidationRule(clock),
+                new CurrencyValidationRule(allowList));
+        return new ProcessPaymentUseCase(new ProcessPaymentUseCaseSteps(repository, bank, clock, rules));
+    }
+
     private AcquiringBankClient bankReturning(BankResult result) {
         return (card, money) -> result;
     }
@@ -35,7 +46,7 @@ class ProcessPaymentUseCaseTest {
 
     @Test
     void authorizedPaymentIsPersistedPendingThenAuthorized() {
-        var service = new ProcessPaymentUseCase(new ProcessPaymentUseCaseSteps(repository,bankReturning(new BankResult(true, "auth-1")), allowList, clock));
+        var service = useCaseWith(bankReturning(new BankResult(true, "auth-1")));
 
         Payment result = service.process(validRequest("2222405343248877"));
 
@@ -50,7 +61,7 @@ class ProcessPaymentUseCaseTest {
 
     @Test
     void declinedPaymentIsPersistedDeclined() {
-        var service = new ProcessPaymentUseCase(new ProcessPaymentUseCaseSteps(repository,bankReturning(new BankResult(false, null)), allowList, clock));
+        var service = useCaseWith(bankReturning(new BankResult(false, null)));
 
         Payment result = service.process(validRequest("2222405343248878"));
 
@@ -64,7 +75,7 @@ class ProcessPaymentUseCaseTest {
     @Test
     void invalidRequestThrowsAndNeverPersistsOrCallsBank() {
         AcquiringBankClient explodingBank = (card, money) -> { throw new AssertionError("bank must not be called"); };
-        var service = new ProcessPaymentUseCase(new ProcessPaymentUseCaseSteps(repository,explodingBank, allowList, clock));
+        var service = useCaseWith(explodingBank);
 
         PaymentRequest bad = new PaymentRequest("123", 13, 2020, "ZZZ", 0, "1");
         ValidationException ex = assertThrows(ValidationException.class, () -> service.process(bad));
@@ -75,7 +86,7 @@ class ProcessPaymentUseCaseTest {
 
     @Test
     void unsupportedCurrencyIsRejected() {
-        var service = new ProcessPaymentUseCase(new ProcessPaymentUseCaseSteps(repository,bankReturning(new BankResult(true, "x")), allowList, clock));
+        var service = useCaseWith(bankReturning(new BankResult(true, "x")));
         PaymentRequest req = new PaymentRequest("2222405343248877", 4, 2027, "JPY", 100, "123");
         ValidationException ex = assertThrows(ValidationException.class, () -> service.process(req));
         assertTrue(ex.errors().toString().contains("JPY"));
@@ -85,7 +96,7 @@ class ProcessPaymentUseCaseTest {
     @Test
     void bankUnavailableLeavesPaymentPending() {
         AcquiringBankClient downBank = (card, money) -> { throw new BankUnavailableException("down", null); };
-        var service = new ProcessPaymentUseCase(new ProcessPaymentUseCaseSteps(repository,downBank, allowList, clock));
+        var service = useCaseWith(downBank);
 
         assertThrows(BankUnavailableException.class, () -> service.process(validRequest("2222405343248870")));
         assertEquals(1, saved.size());
