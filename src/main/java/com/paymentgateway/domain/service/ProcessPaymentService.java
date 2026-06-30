@@ -29,6 +29,13 @@ public class ProcessPaymentService implements ProcessPaymentUseCase {
 
     @Override
     public Payment process(PaymentRequest request) {
+        ValidatedPayment validated = validate(request);
+        Payment pending = repository.save(pendingPaymentFor(validated));
+        BankResult result = bankClient.authorize(validated.card(), validated.money());
+        return repository.save(settle(pending, result));
+    }
+
+    private ValidatedPayment validate(PaymentRequest request) {
         List<String> errors = new ArrayList<>();
 
         Currency currency = collect(errors, () -> Currency.of(request.currency()));
@@ -43,12 +50,18 @@ public class ProcessPaymentService implements ProcessPaymentUseCase {
             throw new ValidationException(errors);
         }
 
-        Payment payment = repository.save(Payment.pending(card.lastFour(), expiry, money));
-        BankResult result = bankClient.authorize(card, money);
-        Payment finalized = result.authorized()
-                ? payment.authorize(result.authorizationCode())
-                : payment.decline();
-        return repository.save(finalized);
+        return new ValidatedPayment(card, money);
+    }
+
+    private Payment pendingPaymentFor(ValidatedPayment validated) {
+        Card card = validated.card();
+        return Payment.pending(card.lastFour(), card.expiry(), validated.money());
+    }
+
+    private Payment settle(Payment pending, BankResult result) {
+        return result.authorized()
+                ? pending.authorize(result.authorizationCode())
+                : pending.decline();
     }
 
     private <T> T collect(List<String> errors, Supplier<T> supplier) {
@@ -58,5 +71,8 @@ public class ProcessPaymentService implements ProcessPaymentUseCase {
             errors.addAll(e.errors());
             return null;
         }
+    }
+
+    private record ValidatedPayment(Card card, Money money) {
     }
 }
