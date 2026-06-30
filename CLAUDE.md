@@ -53,6 +53,8 @@ Rules:
 
 ## Git workflow
 
+- **Always work directly on `main`.** Don't create feature branches or git worktrees for
+  this project — commit straight to `main`.
 - **Never run `git push`.** Pushing is the user's call, always.
 - **Never run `git commit` unless explicitly asked.** Stage/leave changes uncommitted by default.
 - When asked to commit, write a clear, conventional message (e.g. `feat: add payment validation`)
