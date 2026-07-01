@@ -1,5 +1,9 @@
 # Payment Gateway
 
+[![CI](https://github.com/nils-emil/payment-gateway-api/actions/workflows/ci.yml/badge.svg)](https://github.com/nils-emil/payment-gateway-api/actions/workflows/ci.yml)
+![Coverage](.github/badges/jacoco.svg)
+![Branches](.github/badges/branches.svg)
+
 A REST API that lets merchants process card payments through a simulated acquiring bank and retrieve previously made payments by ID. Built with Java 21 and Spring Boot 3, using a hexagonal (ports & adapters) architecture to keep domain logic framework-free and independently testable.
 
 ## Prerequisites
