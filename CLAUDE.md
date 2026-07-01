@@ -49,12 +49,12 @@ Rules:
   — the driven side does not reuse the inbound command type.
 - Persistence is an in-memory `InMemoryPaymentRepository` (`ConcurrentHashMap<UUID, Payment>`) in
   `adapter/out/persistence`, wired as the sole `@Repository`. No database, schema, or migrations.
-  Data is lost on restart — acceptable for this exercise. See ADR-0014 (and ADR-0010 for the
-  Postgres/JPA alternative it superseded).
-- `POST /payments` is idempotent on an optional `Idempotency-Key` header (ADR-0009): the key rides
+  Data is lost on restart — acceptable for this exercise. A real relational store (Postgres/JPA)
+  behind the same port is the production path.
+- `POST /payments` is idempotent on an optional `Idempotency-Key` header (ADR-0007): the key rides
   on `PaymentCommand`, is stored on `Payment`, and a replay returns the stored payment without
   re-calling the bank. With the in-memory store the key is de-duplicated in application logic only
-  (no unique constraint) — see ADR-0014.
+  (no unique constraint) — see ADR-0007.
 - Adapters depend on the domain, never the other way round.
 - Controllers map to/from domain objects via dedicated mappers — domain objects never
   cross the REST boundary directly.

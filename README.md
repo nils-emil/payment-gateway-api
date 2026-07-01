@@ -8,10 +8,9 @@ A REST API that lets merchants process card payments through a simulated acquiri
 - Docker — for the acquiring-bank simulator and (optionally) to run the whole stack via
   `docker-compose`. The build and the full test suite need no Docker.
 
-Payments are held in an in-memory repository (see [ADR-0014](docs/adr/0014-revert-to-in-memory-repository.md))
-— there is no database to provision. Data does not survive a restart, which is acceptable for this
-exercise; [ADR-0010](docs/adr/0010-postgres-jpa-liquibase.md) records the production-grade Postgres
-alternative behind the same port.
+Payments are held in an in-memory repository — there is no database to provision. Data does not
+survive a restart, which is acceptable for this exercise; a real relational store (Postgres/JPA)
+behind the same port is the production path.
 
 ## Build and run
 
@@ -79,7 +78,7 @@ POST /payments
 
 Request body fields: `card_number`, `expiry_month`, `expiry_year`, `currency` (ISO 4217; GBP/USD/EUR), `amount` (integer, minor currency unit), `cvv`.
 
-Optional header: `Idempotency-Key`. Sending the same key replays the original payment instead of creating a second one (and does not call the bank again) — see [ADR-0009](docs/adr/0009-idempotency-key.md).
+Optional header: `Idempotency-Key`. Sending the same key replays the original payment instead of creating a second one (and does not call the bank again) — see [ADR-0007](docs/adr/0007-idempotency-key.md).
 
 Returns `200` with the payment record on success (`Authorized` or `Declined`). Returns `400` with a list of validation errors if the request is invalid — no payment is created in that case. Returns `502` if the bank is unavailable.
 
@@ -100,11 +99,7 @@ Design rationale is recorded as ADRs in [`docs/adr/`](docs/adr/):
 - [ADR-0001](docs/adr/0001-use-hexagonal-architecture.md) — Hexagonal architecture and domain purity
 - [ADR-0002](docs/adr/0002-persist-first-payment-lifecycle.md) — Persist-first payment lifecycle and `Pending` status
 - [ADR-0003](docs/adr/0003-rejected-as-400-no-resource.md) — Rejected as HTTP 400 with no persisted resource
-- [ADR-0004](docs/adr/0004-in-memory-repository.md) — In-memory repository (superseded by 0010, reinstated by 0014)
-- [ADR-0005](docs/adr/0005-separate-unit-and-integration-source-sets.md) — Separate unit and integration source sets
-- [ADR-0006](docs/adr/0006-name-application-layer-usecase.md) — Name the application layer "use case"
-- [ADR-0007](docs/adr/0007-bank-call-failure-handling.md) — Bank-call failure handling: timeouts and a logged `Pending` record
-- [ADR-0008](docs/adr/0008-money-value-object.md) — Model amount + currency as a `Money` value object
-- [ADR-0009](docs/adr/0009-idempotency-key.md) — Idempotent payment creation via an `Idempotency-Key` header
-- [ADR-0010](docs/adr/0010-postgres-jpa-liquibase.md) — Persist payments in Postgres via Spring Data JPA and Liquibase (superseded by 0014)
-- [ADR-0014](docs/adr/0014-revert-to-in-memory-repository.md) — Revert to an in-memory repository for the exercise scope
+- [ADR-0004](docs/adr/0004-separate-unit-and-integration-source-sets.md) — Separate unit and integration source sets
+- [ADR-0005](docs/adr/0005-bank-call-failure-handling.md) — Bank-call failure handling: timeouts and a logged `Pending` record
+- [ADR-0006](docs/adr/0006-money-value-object.md) — Model amount + currency as a `Money` value object
+- [ADR-0007](docs/adr/0007-idempotency-key.md) — Idempotent payment creation via an `Idempotency-Key` header

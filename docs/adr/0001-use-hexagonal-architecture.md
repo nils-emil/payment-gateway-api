@@ -12,7 +12,7 @@ Framework coupling (Spring annotations, Jackson, HTTP clients) mixed into busine
 
 We will structure the application as a hexagonal (ports & adapters) architecture:
 
-- **Domain** (`domain/`) contains pure Java business logic — models, use-case interfaces (ports/in), driven-port interfaces (ports/out), and service implementations. It has zero Spring, Jackson, or HTTP imports and compiles standalone.
+- **Domain** (`domain/`) contains the business logic — value objects and models (`domain/model`), the inbound command that carries a request across the edge (`domain/port/in`), driven-port interfaces (`domain/port/out`), and the application use cases that orchestrate them (`domain/usecase`). Each use case lives in its own subpackage as a Spring `@Service` bean named `…UseCase` (e.g. `domain/usecase/processpayment`), colocated with the collaborators it owns. The `domain/model` value objects and the ports stay free of Spring, Jackson, or HTTP imports and compile standalone.
 - **Adapters** depend inward on the domain. The REST controller (`adapter/in/web/`) maps HTTP requests to domain commands and domain objects to HTTP responses via dedicated mappers; domain objects never cross the REST boundary directly. Each external integration (bank simulator) gets a port interface in `domain/port/out/` and an adapter in `adapter/out/`.
 - **Config** (`config/`) handles Spring wiring, bean definitions, and externalised configuration. Framework concerns are confined here and to the adapter layer.
 

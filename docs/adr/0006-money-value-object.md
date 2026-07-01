@@ -1,4 +1,4 @@
-# 0008. Model amount + currency as a Money value object
+# 0006. Model amount + currency as a Money value object
 
 **Status:** Accepted
 

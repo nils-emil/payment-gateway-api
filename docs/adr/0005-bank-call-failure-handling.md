@@ -1,4 +1,4 @@
-# 0007. Bank-call failure handling: timeouts and a logged Pending record
+# 0005. Bank-call failure handling: timeouts and a logged Pending record
 
 **Status:** Accepted
 
