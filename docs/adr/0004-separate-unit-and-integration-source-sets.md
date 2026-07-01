@@ -13,7 +13,7 @@ We will maintain two Gradle source sets with separate tasks:
 - **`src/test/java`** — fast unit tests with no Spring context. Domain validation, status transitions, service logic with mocked ports, and mapper logic. Run with `./gradlew test`. This is the TDD inner loop: it runs in seconds.
 - **`src/integrationTest/java`** — slice and integration tests that require a Spring context: `@WebMvcTest` for the controller and error-handling advice; the `RestClient` bank adapter against a stubbed HTTP server; a `@SpringBootTest` bean-wiring smoke test. Run with `./gradlew integrationTest`.
 
-`./gradlew clean build` runs both source sets in order. The `integrationTest` task depends on `test`, so a failing unit test stops the build before the slower integration suite runs.
+`./gradlew clean build` runs both source sets: `check` depends on `integrationTest`, and `integrationTest` is ordered after `test` via `shouldRunAfter`, so the fast unit suite runs first and a failing unit test halts the build before the slower integration suite runs.
 
 ## Consequences
 

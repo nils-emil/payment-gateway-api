@@ -5,7 +5,6 @@ import com.paymentgateway.domain.model.PaymentStatus;
 import com.paymentgateway.domain.port.in.PaymentCommand;
 import com.paymentgateway.domain.port.out.BankResult;
 import com.paymentgateway.domain.port.out.PaymentMetrics;
-import com.paymentgateway.domain.support.exception.BankUnavailableException;
 import com.paymentgateway.domain.support.exception.PaymentInProgressException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -35,8 +35,8 @@ is never safe.
   In-doubt `Pending` payments are reconciled **out-of-band**; we deliberately do not build an
   automated sweep. Such a record cannot be settled by the gateway anyway (re-authorization is
   forbidden, and we do not store the PAN/CVV to rebuild the request), and it stays observable via
-  `GET /payments/{id}` (`200` with `Pending`) and the bank-failure log — sufficient for an
-  operator to reconcile manually.
+  `GET /payments/{id}` (`200` with `Pending`) and by querying the repository for `Pending`
+  payments — sufficient for an operator to reconcile manually.
 
 ## Known limitations
 
