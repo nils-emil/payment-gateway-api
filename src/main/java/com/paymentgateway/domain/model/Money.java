@@ -1,16 +1,13 @@
 package com.paymentgateway.domain.model;
 
-public record Money(Currency currency, long amount) {
+public record Money(long amount, String currency) {
+
     public Money {
-        if (currency == null) {
-            throw new ValidationException("currency.required", "currency is required");
+        if (currency == null || !currency.matches("[A-Z]{3}")) {
+            throw new IllegalArgumentException("currency must be a 3-letter ISO 4217 code: " + currency);
         }
         if (amount <= 0) {
-            throw new ValidationException("amount.invalid", "amount must be a positive integer in the minor currency unit");
+            throw new IllegalArgumentException("amount must be positive: " + amount);
         }
-    }
-
-    public static Money of(Currency currency, long amount) {
-        return new Money(currency, amount);
     }
 }

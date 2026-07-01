@@ -5,7 +5,13 @@ A REST API that lets merchants process card payments through a simulated acquiri
 ## Prerequisites
 
 - Java 21
-- Docker (for the bank simulator)
+- Docker — for the acquiring-bank simulator and (optionally) to run the whole stack via
+  `docker-compose`. The build and the full test suite need no Docker.
+
+Payments are held in an in-memory repository (see [ADR-0014](docs/adr/0014-revert-to-in-memory-repository.md))
+— there is no database to provision. Data does not survive a restart, which is acceptable for this
+exercise; [ADR-0010](docs/adr/0010-postgres-jpa-liquibase.md) records the production-grade Postgres
+alternative behind the same port.
 
 ## Build and run
 
@@ -28,17 +34,40 @@ A REST API that lets merchants process card payments through a simulated acquiri
 ```bash
 ./gradlew bootRun
 ```
+This expects the bank simulator (below) to be reachable on http://localhost:8080.
+
+## Run everything with Docker
+
+`docker-compose up` builds the gateway image (`Dockerfile`) and starts both the gateway and the
+acquiring-bank simulator together:
+
+```bash
+docker-compose up --build
+```
+
+- **`payment_gateway`** — the API on http://localhost:8090, pointed at the bank via
+  `PAYMENT_BANK_BASE_URL=http://bank_simulator:8080`.
+- **`bank_simulator`** — Mountebank on port 8080 (admin on 2525), configured by
+  [`imposters/imposters.json`](imposters/imposters.json).
 
 ## Bank simulator
 
-The gateway forwards valid payment requests to a simulated acquiring bank running on port 8080.
+The gateway forwards valid payment requests to a simulated acquiring bank (Mountebank) on port 8080.
+The imposter in `imposters/imposters.json` decides the outcome from the card's **last digit**:
 
-Start the simulator with Docker:
+| Card number ends in | Bank response            | Gateway result |
+|---------------------|--------------------------|----------------|
+| odd (`1,3,5,7,9`)   | `200` authorized         | `Authorized`   |
+| even (`2,4,6,8`)    | `200` not authorized     | `Declined`     |
+| `0`                 | `503` Service Unavailable | `502` (in-doubt `Pending`) |
+
+To run the simulator on its own:
 ```bash
-docker-compose up
+docker-compose up bank_simulator
 ```
 
-The gateway's bank base URL is configured by `payment.bank.base-url` in `src/main/resources/application.yml`. Override it via environment variable if needed; never hardcode it.
+The gateway's bank base URL is configured by `payment.bank.base-url` in `src/main/resources/application.yml`
+(env override `PAYMENT_BANK_BASE_URL`). Never hardcode it.
 
 ## API endpoints
 
@@ -49,6 +78,8 @@ POST /payments
 ```
 
 Request body fields: `card_number`, `expiry_month`, `expiry_year`, `currency` (ISO 4217; GBP/USD/EUR), `amount` (integer, minor currency unit), `cvv`.
+
+Optional header: `Idempotency-Key`. Sending the same key replays the original payment instead of creating a second one (and does not call the bank again) — see [ADR-0009](docs/adr/0009-idempotency-key.md).
 
 Returns `200` with the payment record on success (`Authorized` or `Declined`). Returns `400` with a list of validation errors if the request is invalid — no payment is created in that case. Returns `502` if the bank is unavailable.
 
@@ -69,5 +100,11 @@ Design rationale is recorded as ADRs in [`docs/adr/`](docs/adr/):
 - [ADR-0001](docs/adr/0001-use-hexagonal-architecture.md) — Hexagonal architecture and domain purity
 - [ADR-0002](docs/adr/0002-persist-first-payment-lifecycle.md) — Persist-first payment lifecycle and `Pending` status
 - [ADR-0003](docs/adr/0003-rejected-as-400-no-resource.md) — Rejected as HTTP 400 with no persisted resource
-- [ADR-0004](docs/adr/0004-in-memory-repository.md) — In-memory repository
+- [ADR-0004](docs/adr/0004-in-memory-repository.md) — In-memory repository (superseded by 0010, reinstated by 0014)
 - [ADR-0005](docs/adr/0005-separate-unit-and-integration-source-sets.md) — Separate unit and integration source sets
+- [ADR-0006](docs/adr/0006-name-application-layer-usecase.md) — Name the application layer "use case"
+- [ADR-0007](docs/adr/0007-bank-call-failure-handling.md) — Bank-call failure handling: timeouts and a logged `Pending` record
+- [ADR-0008](docs/adr/0008-money-value-object.md) — Model amount + currency as a `Money` value object
+- [ADR-0009](docs/adr/0009-idempotency-key.md) — Idempotent payment creation via an `Idempotency-Key` header
+- [ADR-0010](docs/adr/0010-postgres-jpa-liquibase.md) — Persist payments in Postgres via Spring Data JPA and Liquibase (superseded by 0014)
+- [ADR-0014](docs/adr/0014-revert-to-in-memory-repository.md) — Revert to an in-memory repository for the exercise scope

@@ -1,13 +1,13 @@
 package com.paymentgateway.adapter.in.web;
 
-import com.paymentgateway.domain.model.Sensitive;
+import com.paymentgateway.domain.support.util.Sensitive;
 
 public record PaymentRequestDto(
         String cardNumber,
-        int expiryMonth,
-        int expiryYear,
+        Integer expiryMonth,
+        Integer expiryYear,
         String currency,
-        long amount,
+        Long amount,
         String cvv) {
 
     @Override

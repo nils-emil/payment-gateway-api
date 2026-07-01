@@ -4,26 +4,24 @@ import java.util.UUID;
 
 public record Payment(
         UUID id,
+        String idempotencyKey,
         PaymentStatus status,
         String lastFour,
-        ExpiryDate expiry,
+        int expiryMonth,
+        int expiryYear,
         Money money,
-        String authorizationCode,
-        String idempotencyKey) {
+        String authorizationCode) {
 
-    public static Payment pending(String lastFour, ExpiryDate expiry, Money money) {
-        return pending(lastFour, expiry, money, UUID.randomUUID().toString());
-    }
-
-    public static Payment pending(String lastFour, ExpiryDate expiry, Money money, String idempotencyKey) {
-        return new Payment(UUID.randomUUID(), PaymentStatus.PENDING, lastFour, expiry, money, null, idempotencyKey);
+    public static Payment pending(UUID id, String idempotencyKey, String lastFour,
+                                  int expiryMonth, int expiryYear, Money money) {
+        return new Payment(id, idempotencyKey, PaymentStatus.PENDING, lastFour, expiryMonth, expiryYear, money, null);
     }
 
     public Payment authorize(String authorizationCode) {
-        return new Payment(id, PaymentStatus.AUTHORIZED, lastFour, expiry, money, authorizationCode, idempotencyKey);
+        return new Payment(id, idempotencyKey, PaymentStatus.AUTHORIZED, lastFour, expiryMonth, expiryYear, money, authorizationCode);
     }
 
     public Payment decline() {
-        return new Payment(id, PaymentStatus.DECLINED, lastFour, expiry, money, null, idempotencyKey);
+        return new Payment(id, idempotencyKey, PaymentStatus.DECLINED, lastFour, expiryMonth, expiryYear, money, null);
     }
 }

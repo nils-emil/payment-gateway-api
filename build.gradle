@@ -1,7 +1,8 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '3.3.5'
-    id 'io.spring.dependency-management' version '1.1.6'
+    id 'jacoco'
+    id 'org.springframework.boot' version '4.1.0'
+    id 'io.spring.dependency-management' version '1.1.7'
 }
 
 group = 'com.paymentgateway'
@@ -31,10 +32,20 @@ repositories {
     mavenCentral()
 }
 
+dependencyLocking {
+    lockAllConfigurations()
+}
+
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
     integrationTestImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
+    integrationTestImplementation 'org.springframework.boot:spring-boot-webmvc-test'
+    integrationTestImplementation 'org.springframework.boot:spring-boot-web-server-test'
 }
 
 tasks.named('test') {
@@ -52,4 +63,44 @@ tasks.register('integrationTest', Test) {
 
 tasks.named('check') {
     dependsOn('integrationTest')
+}
+
+jacoco {
+    toolVersion = '0.8.15'
+}
+
+tasks.named('jacocoTestReport') {
+    dependsOn 'test', 'integrationTest'
+    executionData fileTree(layout.buildDirectory).include('jacoco/*.exec')
+    reports {
+        html.required = true
+        csv.required = true
+        xml.required = true
+    }
+    classDirectories.setFrom(files(sourceSets.main.output.classesDirs.collect {
+        fileTree(dir: it, exclude: ['**/PaymentGatewayApplication.class'])
+    }))
+}
+
+tasks.register('jacocoIntegrationTestReport', JacocoReport) {
+    dependsOn 'integrationTest'
+    executionData fileTree(layout.buildDirectory).include('jacoco/integrationTest.exec')
+    sourceDirectories.setFrom(files(sourceSets.main.java.srcDirs))
+    classDirectories.setFrom(files(sourceSets.main.output.classesDirs.collect {
+        fileTree(dir: it, exclude: ['**/PaymentGatewayApplication.class'])
+    }))
+    reports {
+        html.required = true
+        csv.required = true
+    }
+}
+
+tasks.register('resolveAndLockAll') {
+    description = 'Resolves every resolvable configuration and writes dependency lock state. Run with --write-locks.'
+    doFirst {
+        assert gradle.startParameter.writeDependencyLocks : 'run with --write-locks'
+    }
+    doLast {
+        configurations.findAll { it.canBeResolved }.each { it.resolve() }
+    }
 }

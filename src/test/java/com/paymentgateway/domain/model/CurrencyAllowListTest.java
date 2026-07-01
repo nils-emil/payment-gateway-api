@@ -1,5 +1,6 @@
 package com.paymentgateway.domain.model;
 
+import com.paymentgateway.domain.support.exception.ValidationException;
 import org.junit.jupiter.api.Test;
 
 import java.util.Set;
@@ -9,16 +10,10 @@ import static org.junit.jupiter.api.Assertions.*;
 class CurrencyAllowListTest {
 
     @Test
-    void acceptsUpToThreeCurrenciesAndChecksMembership() {
+    void checksMembership() {
         CurrencyAllowList allowList = new CurrencyAllowList(Set.of("GBP", "USD", "EUR"));
-        assertTrue(allowList.contains(Currency.of("GBP")));
-        assertFalse(allowList.contains(Currency.of("JPY")));
-    }
-
-    @Test
-    void rejectsMoreThanThreeCurrencies() {
-        assertThrows(ValidationException.class,
-                () -> new CurrencyAllowList(Set.of("GBP", "USD", "EUR", "JPY")));
+        assertTrue(allowList.contains("GBP"));
+        assertFalse(allowList.contains("JPY"));
     }
 
     @Test

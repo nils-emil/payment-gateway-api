@@ -6,9 +6,17 @@ spring:
     property-naming-strategy: SNAKE_CASE
     default-property-inclusion: non_null
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
+
 payment:
   bank:
-    base-url: http://localhost:8080
+    base-url: ${PAYMENT_BANK_BASE_URL:http://localhost:8080}
+    connect-timeout: 2s
+    read-timeout: 5s
   currencies:
     allowed:
       - GBP

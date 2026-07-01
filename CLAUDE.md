@@ -9,16 +9,22 @@ Java · Spring Boot · Gradle · JUnit.
 ```
 src/main/java/com/paymentgateway/
 ├── domain/
-│   ├── model/               # Pure value objects: Payment, Card, Money, PaymentStatus, etc.
-│   ├── port/in/              # Use case input commands (e.g. PaymentRequest)
-│   ├── port/out/             # Driven ports — interfaces (PaymentRepository, AcquiringBankClient)
-│   └── service/              # Use case classes as Spring @Service
-│       │                      #   (e.g. ProcessPaymentUseCase + ProcessPaymentUseCaseSteps, GetPaymentUseCase)
-│       └── validation/        # ValidationRule<T> @Components, one per rule
+│   ├── model/               # Pure value objects: Payment, Money, PaymentStatus, CurrencyAllowList, ValidationError
+│   ├── port/in/              # Use case input commands (e.g. PaymentCommand — the unvalidated edge)
+│   ├── port/out/             # Driven ports — interfaces + outbound commands
+│   │                          # (PaymentRepository, AcquiringBankClient, IdGenerator, AuthorizationCommand)
+│   ├── usecase/             # One subpackage per use case (@Service beans named …UseCase)
+│   │   ├── getpayment/       # GetPaymentUseCase
+│   │   └── processpayment/   # ProcessPaymentUseCase + ProcessPaymentUseCaseSteps
+│   │       └── validation/    # ValidationRule<PaymentCommand> @Components, one per rule
+│   └── support/             # Cross-cutting domain support
+│       ├── exception/        # ValidationException, BankUnavailableException, EntityNotFoundException
+│       └── util/             # Stateless helpers (Sensitive — card-number masking)
 ├── adapter/
 │   ├── in/web/                # REST controllers, request/response DTOs, mappers
 │   └── out/
-│       ├── persistence/        # In-memory repository implementing PaymentRepository
+│       ├── persistence/        # InMemoryPaymentRepository implementing PaymentRepository (ConcurrentHashMap)
+│       ├── id/                  # IdGenerator adapter (UUID)
 │       └── bank/                # HTTP client implementing AcquiringBankClient, talks to bank simulator
 └── config/                   # Spring wiring (property beans, RestClient config)
 ```
@@ -26,18 +32,29 @@ src/main/java/com/paymentgateway/
 Rules:
 - `domain/model` is pure: zero Spring/Jackson/HTTP annotations or imports — value objects
   must compile standalone.
-- Use cases live in `domain/service` as Spring `@Service` beans named `…UseCase`; multi-step
-  use cases delegate their step implementations to a sibling `…UseCaseSteps` `@Component`.
+- Each use case lives in its own subpackage under `domain/usecase` (e.g. `usecase/getpayment`,
+  `usecase/processpayment`) as a Spring `@Service` bean named `…UseCase`. A multi-step use case's
+  subpackage also holds its sibling `…UseCaseSteps` `@Component` and the validation rules it owns.
   Controllers depend on the use-case class directly (no inbound port interface).
-- Request validation is a set of `ValidationRule<T>` `@Component`s in `domain/service/validation`;
-  each returns a `List<ValidationError>` (`code` + `description`, never throws). The use-case
-  steps inject `List<ValidationRule<PaymentRequest>>` and aggregate them in `validate(...)`; the
-  use case then calls `handleValidationErrors(...)`, which raises one `ValidationException`
-  (→ 400 Rejected) carrying all errors. Add a rule by adding a `@Component`.
+- Request validation is a set of `ValidationRule<PaymentCommand>` `@Component`s in
+  `domain/usecase/processpayment/validation`; each returns a `List<ValidationError>` (`code` +
+  `description`, never throws). `ProcessPaymentUseCaseSteps` injects the
+  `List<ValidationRule<PaymentCommand>>` and aggregates them in `validate(...)`, which raises one
+  `ValidationException` (→ 400 Rejected) carrying all errors. Add a rule by adding a `@Component`.
 - Validation errors carry a translation `code` and a fallback `description`; both are returned
   in the 400 response (`{ "status": "Rejected", "errors": [ { "code", "description" } ] }`).
 - Driven side keeps interfaces: `domain/port/out` ports (`PaymentRepository`,
-  `AcquiringBankClient`) are implemented by adapters in `adapter/out`.
+  `AcquiringBankClient`, `IdGenerator`) are implemented by adapters in `adapter/out`. The bank
+  port takes its own outbound `AuthorizationCommand` (built in the use case from `PaymentCommand`)
+  — the driven side does not reuse the inbound command type.
+- Persistence is an in-memory `InMemoryPaymentRepository` (`ConcurrentHashMap<UUID, Payment>`) in
+  `adapter/out/persistence`, wired as the sole `@Repository`. No database, schema, or migrations.
+  Data is lost on restart — acceptable for this exercise. See ADR-0014 (and ADR-0010 for the
+  Postgres/JPA alternative it superseded).
+- `POST /payments` is idempotent on an optional `Idempotency-Key` header (ADR-0009): the key rides
+  on `PaymentCommand`, is stored on `Payment`, and a replay returns the stored payment without
+  re-calling the bank. With the in-memory store the key is de-duplicated in application logic only
+  (no unique constraint) — see ADR-0014.
 - Adapters depend on the domain, never the other way round.
 - Controllers map to/from domain objects via dedicated mappers — domain objects never
   cross the REST boundary directly.
@@ -48,7 +65,7 @@ Rules:
 
 - `./gradlew clean build` — build + run all tests (run this before considering any task done)
 - `./gradlew test` — run unit tests only (fast TDD loop)
-- `./gradlew integrationTest` — run integration tests only
+- `./gradlew integrationTest` — run integration tests only (Spring context + MockWebServer bank stub; no Docker)
 - `./gradlew test --tests ClassName` — run a single test class
 - `./gradlew bootRun` — run the app locally
 - Bank simulator: run via Docker; configure its

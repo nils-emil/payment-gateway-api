@@ -23,4 +23,14 @@ public class InMemoryPaymentRepository implements PaymentRepository {
     public Optional<Payment> findById(UUID id) {
         return Optional.ofNullable(store.get(id));
     }
+
+    @Override
+    public Optional<Payment> findByIdempotencyKey(String idempotencyKey) {
+        if (idempotencyKey == null) {
+            return Optional.empty();
+        }
+        return store.values().stream()
+                .filter(p -> idempotencyKey.equals(p.idempotencyKey()))
+                .findFirst();
+    }
 }

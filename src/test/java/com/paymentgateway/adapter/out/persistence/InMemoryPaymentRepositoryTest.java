@@ -3,12 +3,14 @@ package com.paymentgateway.adapter.out.persistence;
 import com.paymentgateway.domain.model.*;
 import org.junit.jupiter.api.Test;
 
+import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class InMemoryPaymentRepositoryTest {
 
     private final InMemoryPaymentRepository repository = new InMemoryPaymentRepository();
-    private final Payment pending = Payment.pending("8877", new ExpiryDate(4, 2027), Money.of(Currency.of("GBP"), 100));
+    private final Payment pending = Payment.pending(UUID.randomUUID(), "key-1", "8877", 4, 2027, new Money(100, "GBP"));
 
     @Test
     void savesAndFindsById() {
@@ -25,6 +27,19 @@ class InMemoryPaymentRepositoryTest {
 
     @Test
     void findByUnknownIdIsEmpty() {
-        assertTrue(repository.findById(java.util.UUID.randomUUID()).isEmpty());
+        assertTrue(repository.findById(UUID.randomUUID()).isEmpty());
+    }
+
+    @Test
+    void findsByIdempotencyKey() {
+        repository.save(pending);
+        assertEquals(pending.id(), repository.findByIdempotencyKey("key-1").orElseThrow().id());
+        assertTrue(repository.findByIdempotencyKey("missing").isEmpty());
+    }
+
+    @Test
+    void findByNullIdempotencyKeyIsEmpty() {
+        repository.save(pending);
+        assertTrue(repository.findByIdempotencyKey(null).isEmpty());
     }
 }

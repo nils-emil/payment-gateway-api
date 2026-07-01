@@ -1,7 +1,7 @@
 package com.paymentgateway.adapter.out.bank;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.paymentgateway.domain.model.Sensitive;
+import com.paymentgateway.domain.support.util.Sensitive;
 
 public record BankPaymentRequest(
         @JsonProperty("card_number") String cardNumber,

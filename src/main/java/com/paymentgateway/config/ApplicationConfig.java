@@ -3,6 +3,7 @@ package com.paymentgateway.config;
 import com.paymentgateway.domain.model.CurrencyAllowList;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 import java.time.Clock;
@@ -13,7 +14,13 @@ public class ApplicationConfig {
 
     @Bean
     public RestClient bankRestClient(PaymentProperties props) {
-        return RestClient.builder().baseUrl(props.bank().baseUrl()).build();
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(props.bank().connectTimeout());
+        requestFactory.setReadTimeout(props.bank().readTimeout());
+        return RestClient.builder()
+                .requestFactory(requestFactory)
+                .baseUrl(props.bank().baseUrl())
+                .build();
     }
 
     @Bean

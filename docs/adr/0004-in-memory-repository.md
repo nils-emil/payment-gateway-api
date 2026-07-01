@@ -1,6 +1,6 @@
 # 0004. In-Memory Repository
 
-**Status:** Accepted
+**Status:** Superseded by 0010
 
 ## Context
 

@@ -1,0 +1,61 @@
+{
+  "imposters": [
+    {
+      "port": 8080,
+      "protocol": "http",
+      "name": "bank_simulator",
+      "stubs": [
+        {
+          "predicates": [
+            { "matches": { "body": { "card_number": "0$" } } }
+          ],
+          "responses": [
+            { "is": { "statusCode": 503 } }
+          ]
+        },
+        {
+          "predicates": [
+            { "matches": { "body": { "card_number": "[2468]$" } } }
+          ],
+          "responses": [
+            {
+              "is": {
+                "statusCode": 200,
+                "headers": { "Content-Type": "application/json" },
+                "body": { "authorized": false, "authorization_code": "" }
+              }
+            }
+          ]
+        },
+        {
+          "predicates": [
+            { "matches": { "body": { "card_number": "[13579]$" } } }
+          ],
+          "responses": [
+            {
+              "is": {
+                "statusCode": 200,
+                "headers": { "Content-Type": "application/json" },
+                "body": {
+                  "authorized": true,
+                  "authorization_code": "0bb07405-6d44-4b50-a14f-7ae0beff13ad"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "responses": [
+            {
+              "is": {
+                "statusCode": 400,
+                "headers": { "Content-Type": "application/json" },
+                "body": { "error": "missing or invalid fields" }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

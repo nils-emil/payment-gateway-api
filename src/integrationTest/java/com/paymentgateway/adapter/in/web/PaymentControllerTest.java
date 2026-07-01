@@ -1,16 +1,18 @@
 package com.paymentgateway.adapter.in.web;
 
+import com.paymentgateway.domain.support.exception.*;
 import com.paymentgateway.domain.model.*;
-import com.paymentgateway.domain.service.GetPaymentUseCase;
-import com.paymentgateway.domain.service.ProcessPaymentUseCase;
+import com.paymentgateway.domain.usecase.getpayment.GetPaymentUseCase;
+import com.paymentgateway.domain.usecase.processpayment.ProcessPaymentUseCase;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -23,8 +25,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PaymentControllerTest {
 
     @Autowired MockMvc mvc;
-    @MockBean ProcessPaymentUseCase processPaymentUseCase;
-    @MockBean GetPaymentUseCase getPaymentUseCase;
+    @MockitoBean ProcessPaymentUseCase processPaymentUseCase;
+    @MockitoBean GetPaymentUseCase getPaymentUseCase;
 
     private final String validBody = """
         {"card_number":"2222405343248877","expiry_month":4,"expiry_year":2027,
@@ -33,7 +35,7 @@ class PaymentControllerTest {
 
     @Test
     void postReturns200AndAuthorizedBody() throws Exception {
-        Payment authorized = Payment.pending("8877", new ExpiryDate(4, 2027), Money.of(Currency.of("GBP"), 100))
+        Payment authorized = Payment.pending(UUID.randomUUID(), null, "8877", 4, 2027, new Money(100, "GBP"))
                 .authorize("auth-1");
         when(processPaymentUseCase.process(any())).thenReturn(authorized);
 
@@ -49,7 +51,7 @@ class PaymentControllerTest {
     @Test
     void validationExceptionReturns400RejectedWithErrors() throws Exception {
         when(processPaymentUseCase.process(any()))
-                .thenThrow(new ValidationException(new ValidationError("cvv.invalid", "cvv must be 3-4 digits")));
+                .thenThrow(new ValidationException(List.of(new ValidationError("cvv.invalid", "cvv must be 3-4 digits"))));
 
         mvc.perform(post("/payments").contentType(MediaType.APPLICATION_JSON).content(validBody))
                 .andExpect(status().isBadRequest())
@@ -65,12 +67,39 @@ class PaymentControllerTest {
 
         mvc.perform(post("/payments").contentType(MediaType.APPLICATION_JSON).content(validBody))
                 .andExpect(status().isBadGateway())
-                .andExpect(jsonPath("$.error").value("acquiring bank unavailable"));
+                .andExpect(jsonPath("$.error").value("acquiring bank unavailable"))
+                .andExpect(jsonPath("$.payment_id").doesNotExist());
+    }
+
+    @Test
+    void inDoubtPendingReplayReturns409() throws Exception {
+        when(processPaymentUseCase.process(any()))
+                .thenThrow(new PaymentInProgressException(UUID.randomUUID()));
+
+        mvc.perform(post("/payments").contentType(MediaType.APPLICATION_JSON).content(validBody))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("payment is still being processed"));
+    }
+
+    @Test
+    void malformedBodyReturns400() throws Exception {
+        mvc.perform(post("/payments").contentType(MediaType.APPLICATION_JSON).content("not json"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("malformed request body"));
+    }
+
+    @Test
+    void unexpectedErrorReturns500() throws Exception {
+        when(processPaymentUseCase.process(any())).thenThrow(new RuntimeException("boom"));
+
+        mvc.perform(post("/payments").contentType(MediaType.APPLICATION_JSON).content(validBody))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.error").value("internal error"));
     }
 
     @Test
     void getReturns200ForKnownPayment() throws Exception {
-        Payment p = Payment.pending("8877", new ExpiryDate(4, 2027), Money.of(Currency.of("GBP"), 100));
+        Payment p = Payment.pending(UUID.randomUUID(), null, "8877", 4, 2027, new Money(100, "GBP"));
         when(getPaymentUseCase.getById(p.id())).thenReturn(p);
 
         mvc.perform(get("/payments/{id}", p.id()))
@@ -81,10 +110,17 @@ class PaymentControllerTest {
     @Test
     void getReturns404ForUnknownPayment() throws Exception {
         UUID id = UUID.randomUUID();
-        when(getPaymentUseCase.getById(id)).thenThrow(new PaymentNotFoundException(id));
+        when(getPaymentUseCase.getById(id)).thenThrow(new EntityNotFoundException("payment", id));
 
         mvc.perform(get("/payments/{id}", id))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("payment not found"));
+    }
+
+    @Test
+    void getWithMalformedIdReturns400() throws Exception {
+        mvc.perform(get("/payments/{id}", "not-a-uuid"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("malformed payment id"));
     }
 }

@@ -1,26 +1,28 @@
 package com.paymentgateway.domain.model;
 
 import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class MoneyTest {
-    private final Currency gbp = Currency.of("GBP");
 
     @Test
-    void acceptsPositiveAmount() {
-        Money money = Money.of(gbp, 100);
+    void holdsAmountAndCurrency() {
+        Money money = new Money(100, "GBP");
         assertEquals(100, money.amount());
-        assertEquals(gbp, money.currency());
+        assertEquals("GBP", money.currency());
     }
 
     @Test
-    void rejectsZeroOrNegative() {
-        assertThrows(ValidationException.class, () -> Money.of(gbp, 0));
-        assertThrows(ValidationException.class, () -> Money.of(gbp, -5));
+    void rejectsNonPositiveAmount() {
+        assertThrows(IllegalArgumentException.class, () -> new Money(0, "GBP"));
+        assertThrows(IllegalArgumentException.class, () -> new Money(-1, "GBP"));
     }
 
     @Test
-    void rejectsNullCurrency() {
-        assertThrows(ValidationException.class, () -> Money.of(null, 100));
+    void rejectsMalformedCurrency() {
+        assertThrows(IllegalArgumentException.class, () -> new Money(100, null));
+        assertThrows(IllegalArgumentException.class, () -> new Money(100, "gbp"));
+        assertThrows(IllegalArgumentException.class, () -> new Money(100, "POUND"));
     }
 }
