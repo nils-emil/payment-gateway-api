@@ -40,8 +40,7 @@ public class ProcessPaymentUseCase {
     private Payment processNew(PaymentCommand command) {
         steps.validate(command);
         Payment pending = steps.savePending(command);
-        BankResult result;
-        result = steps.authorize(command);
+        BankResult result = steps.authorize(command);
         Payment settled = steps.settle(pending, result);
         log.info("Payment {} {} amount={} {}", settled.id(), settled.status(),
                 settled.money().amount(), settled.money().currency());
